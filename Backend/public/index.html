@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cámara IP IA - Transmisor</title>
+    <style>
+      body {
+        background: #1a1a1a;
+        color: #00ff00;
+        font-family: monospace;
+        text-align: center;
+      }
+      video,
+      canvas {
+        width: 100%;
+        max-width: 500px;
+        border: 1px solid #333;
+      }
+      .stats {
+        font-size: 0.8em;
+        color: #888;
+      }
+      #statusInfo {
+        font-size: medium;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>📡 TRANSMISOR IA</h2>
+    <video id="video" autoplay playsinline style="display: none"></video>
+    <canvas id="canvas"></canvas>
+    <div class="stats" id="info">
+        <p id="statusInfo">Sin acceso por motivos de seguridad del navegador <br>
+            En el navegador de tu teléfono, escribe: chrome://flags <br>
+            Busca: "Insecure origins treated as secure". <br>
+            Activa la opción (Enabled) y en el cuadro de texto escribe la IP y puerto del servidor: http://192.168.1.1:3000 (usa la IP del servidor). <br>
+            Reinicia el navegador (botón Relaunch). <br>
+            Vuelve a entrar a la página. Ahora debería pedirte permiso para usar la cámara.</p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const info = document.getElementById("info");
+      const statusInfo = document.getElementById("statusInfo");
+
+      // Configuración de resolución (640x480 es ideal para MediaPipe)
+      const constraints = {
+        video: { facingMode: "environment", width: 640, height: 480 },
+        audio: false,
+      };
+
+      navigator.mediaDevices
+        .getUserMedia(constraints)
+        .then((stream) => {
+          log("✅ Cámara accedida correctamente");
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            log("🎥 Video cargado, iniciando transmisión...");
+            enviarVideo();
+          };
+        })
+        .catch((err) => {
+          log("❌ ERROR de Cámara: " + err.name + " - " + err.message);
+          if (location.protocol !== "https:") {
+            log("⚠️ El navegador bloquea la cámara por falta de HTTPS.");
+          }
+        });
+
+      function enviarVideo() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Convertir a Blob (Binario) directamente para evitar el peso de Base64
+          canvas.toBlob(
+            (blob) => {
+              socket.emit("video-frame", blob);
+            },
+            "image/jpeg",
+            0.6
+          ); // 0.6 es el balance perfecto calidad/peso
+        }
+        // Sincronizamos con el refresco de pantalla del teléfono (aprox 30-60fps)
+        requestAnimationFrame(enviarVideo);
+      }
+      
+
+      // Función para imprimir logs en la pantalla del teléfono
+      function log(msg) {
+        const msgError = document.createElement("p");
+        msgError.textContent = msg;
+        info.appendChild(msgError);
+        console.log(msg);
+      }
+
+      
+
+      socket.on("connect", () => (statusInfo.innerText = "✅ Conectado al servidor"));
+    </script>
+  </body>
+</html>

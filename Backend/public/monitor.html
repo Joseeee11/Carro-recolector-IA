@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor de Video IA</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; }
+        img { width: 80%; max-width: 800px; border: 2px solid #0f0; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>🖥️ MONITOR DE RECEPCIÓN</h2>
+    <div id="fps">FPS: 0</div>
+    <img id="pantalla" src="" alt="Esperando video...">
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const pantalla = document.getElementById('pantalla');
+        const fpsDisplay = document.getElementById('fps');
+        
+        let frameCount = 0;
+        setInterval(() => {
+            fpsDisplay.innerText = `FPS: ${frameCount}`;
+            frameCount = 0;
+        }, 1000);
+
+        socket.on('monitor-frame', (buffer) => {
+            // buffer llega como un ArrayBuffer (binario puro)
+            // 1. Creamos un "Blob" (Binary Large Object)
+            const blob = new Blob([buffer], { type: 'image/jpeg' });
+            
+            // 2. Creamos una URL temporal para ese Blob
+            const url = URL.createObjectURL(blob);
+            
+            // 3. Liberamos la URL anterior para no colapsar la memoria RAM
+            const viejaUrl = pantalla.src;
+            pantalla.src = url;
+            if (viejaUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(viejaUrl);
+            }
+
+            frameCount++;
+        });
+    </script>
+</body>
+</html>
