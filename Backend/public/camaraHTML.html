@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -31,12 +31,17 @@
     <video id="video" autoplay playsinline style="display: none"></video>
     <canvas id="canvas"></canvas>
     <div class="stats" id="info">
-        <p id="statusInfo">Sin acceso por motivos de seguridad del navegador <br>
-            En el navegador de tu teléfono, escribe: chrome://flags <br>
-            Busca: "Insecure origins treated as secure". <br>
-            Activa la opción (Enabled) y en el cuadro de texto escribe la IP y puerto del servidor: http://192.168.1.1:3000 (usa la IP del servidor). <br>
-            Reinicia el navegador (botón Relaunch). <br>
-            Vuelve a entrar a la página. Ahora debería pedirte permiso para usar la cámara.</p>
+      <p id="statusInfo">
+        Sin acceso por motivos de seguridad del navegador <br />
+        En el navegador de tu teléfono, escribe: chrome://flags <br />
+        Busca: "Insecure origins treated as secure". <br />
+        Activa la opción (Enabled) y en el cuadro de texto escribe la IP y
+        puerto del servidor: http://192.168.1.1:3000 (usa la IP del servidor).
+        <br />
+        Reinicia el navegador (botón Relaunch). <br />
+        Vuelve a entrar a la página. Ahora debería pedirte permiso para usar la
+        cámara.
+      </p>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -47,6 +52,9 @@
       const ctx = canvas.getContext("2d");
       const info = document.getElementById("info");
       const statusInfo = document.getElementById("statusInfo");
+      const FPS = 20; // 20 Frames por segundo es suficiente
+      const INTERVALO = 1000 / FPS;
+      let ultimoTiempo = 0;
 
       // Configuración de resolución (640x480 es ideal para MediaPipe)
       const constraints = {
@@ -78,18 +86,17 @@
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           // Convertir a Blob (Binario) directamente para evitar el peso de Base64
-          canvas.toBlob(
+          canvas.toBlob(  //nota: vamos a probar a DATAURL despues
             (blob) => {
-              socket.emit("video-frame", blob);
+              socket.volatile.emit("video-frame", blob);
             },
             "image/jpeg",
-            0.6
-          ); // 0.6 es el balance perfecto calidad/peso
+            0.6,
+          ); // Calidad 0.3 para reducir tamaño
         }
         // Sincronizamos con el refresco de pantalla del teléfono (aprox 30-60fps)
         requestAnimationFrame(enviarVideo);
       }
-      
 
       // Función para imprimir logs en la pantalla del teléfono
       function log(msg) {
@@ -99,9 +106,46 @@
         console.log(msg);
       }
 
-      
+      // Función para activar Wake Lock y evitar que la pantalla se apague
+      async function activarWakeLock() {
+        try {
+          const wakeLock = await navigator.wakeLock.request("screen");
+          console.log("Pantalla bloqueada (No se apagará)");
 
-      socket.on("connect", () => (statusInfo.innerText = "✅ Conectado al servidor"));
+          // Si el usuario minimiza y vuelve, hay que pedir el bloqueo otra vez
+          document.addEventListener("visibilitychange", async () => {
+            if (document.visibilityState === "visible") {
+              await navigator.wakeLock.request("screen");
+            }
+          });
+        } catch (err) {
+          console.error("Error al bloquear pantalla:", err);
+        }
+      }
+      // Llama a esta función cuando inicies la cámara
+      navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+        activarWakeLock(); // <--- AGREGAR ESTO
+        video.srcObject = stream;
+        // ... resto del código ...
+      });
+
+      socket.on(
+        "connect",
+        () => (statusInfo.innerText = "✅ Conectado al servidor"),
+      );
+      socket.on(
+        "disconnect",
+        () => (statusInfo.innerText = "❌ Desconectado del servidor"),
+      );
+
+      let contadorping = 0;
+      setInterval(() => {
+        socket.volatile.emit("ping", ++contadorping);
+      }, 1000);
+      socket.on("pong", (count) => {
+        statusInfo.innerText = `Ping: ${count} ms`;
+      });
+        
     </script>
   </body>
 </html>

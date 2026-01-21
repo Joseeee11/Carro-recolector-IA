@@ -5,6 +5,14 @@ class IPModule {
     const interfaces = os.networkInterfaces();
     for (const name in interfaces) {
       for (const iface of interfaces[name]) {
+        // Ignorar ciertas interfaces virtuales comunes
+        if (
+          name.includes("Cloudflare") ||
+          name.includes("tun") ||
+          name.includes("docker")
+        ) {
+          continue;
+        }
         // Ignorar interfaces internas y obtener solo IPv4
         if (iface.family === "IPv4" && !iface.internal) {
           this.ipLocal = iface.address;
