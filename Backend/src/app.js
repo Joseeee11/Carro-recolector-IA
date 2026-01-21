@@ -19,10 +19,16 @@ io.on('connection', (socket) => {
     console.log('Teléfono conectado. ID:', socket.id);
 
     // Recibimos el frame binario del teléfono
-    socket.on('video-frame', (buffer) => {
-        // 'buffer' contiene los bytes de la imagen JPEG procesada
-        // Aquí es donde en el siguiente paso inyectaremos a Python
-        socket.broadcast.volatile.emit('monitor-frame', buffer);
+    socket.on('video-frame', (webp) => {
+
+        // comprobar que es un string (dataURL)
+        if (typeof webp !== 'string') {
+            console.error('Frame recibido no es un string dataURL');
+            return;
+        } else {
+            console.log('Frame dataURL recibido, tamaño:', webp.length);
+        }
+        socket.broadcast.volatile.emit('monitor-frame', webp);
 
         // console.log(`Frame recibido: ${(buffer.length / 1024).toFixed(2)} KB`);
     });

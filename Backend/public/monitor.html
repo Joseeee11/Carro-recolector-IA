@@ -25,15 +25,11 @@
             frameCount = 0;
         }, 1000);
 
-        socket.on('monitor-frame', (buffer) => {
-            // buffer llega como un ArrayBuffer (binario puro)
-            // 1. Creamos un "Blob" (Binary Large Object)
-            const blob = new Blob([buffer], { type: 'image/jpeg' });
-            
-            // 2. Creamos una URL temporal para ese Blob
-            const url = URL.createObjectURL(blob);
-            
-            // 3. Liberamos la URL anterior para no colapsar la memoria RAM
+        socket.on('monitor-frame', (wepb) => {
+            // llega webp como dataURL
+            const url = wepb;
+            // 1. Recibir el webp y pasamos a url de objeto
+
             const viejaUrl = pantalla.src;
             pantalla.src = url;
             if (viejaUrl.startsWith('blob:')) {
