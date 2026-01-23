@@ -1,0 +1,225 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Control Carro ESP32</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --slider-bg: #333;
+      --thumb-color: #007bff;
+      --thumb-hover: #0056b3;
+      --text-color: #f0f0f0;
+      --button-bg: #1a1a1a2c;
+    }
+    html, body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      touch-action: none; /* Evita zoom y scroll en móbiles */
+      overflow: hidden;
+    }
+    .headers{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .container_palancas{
+      display: flex;
+      flex: 0.9;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: center;
+      width: 90%;
+      max-width: 600px;
+    }
+    .headers h1 {
+      font-family: cursive;
+      font-size: 2em;
+      font-style: italic;
+    }
+    .slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      font-weight: 400;
+      margin-bottom: 15px;
+    }
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100px;
+      height: 250px;
+      background: var(--slider-bg);
+      outline: none;
+      border-radius: 10px;
+      margin: 0;
+      writing-mode: bt-lr; /* IE */
+      -webkit-appearance: slider-vertical; /* WebKit */
+    }
+    /* Estilos del "pulgar" (thumb) */
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 40px;
+      height: 40px;
+      background: var(--thumb-color);
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background 0.1s ease-in-out;
+    }
+    .slider::-moz-range-thumb {
+      width: 40px;
+      height: 40px;
+      background: var(--thumb-color);
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background 0.1s ease-in-out;
+    }
+    .slider::-webkit-slider-thumb:hover {
+      background: var(--thumb-hover);
+    }
+    .slider::-moz-range-thumb:hover {
+      background: var(--thumb-hover);
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 1.1em;
+      color: #888;
+    }
+    .pad button {
+      background-color: var(--button-bg);
+      border: 2px solid var(--text-color);
+      border-radius: 10px;
+      color: var(--text-color);
+    }
+    .pad button:active {
+      background-color: var(--thumb-color);
+      border-color: var(--thumb-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="headers">
+    <h1>Control Carro ESP32</h1>
+  </div>
+  
+  <div class="container_palancas">
+    <div class="slider-wrapper">
+      <h2>Izquierda</h2>
+      <input type="range" min="-255" max="255" value="0" class="slider" id="sliderL">
+    </div>
+    <div class="slider-wrapper">
+      <h2>Derecha</h2>
+      <input type="range" min="-255" max="255" value="0" class="slider" id="sliderR">
+    </div>
+  </div>
+  <div class="container_botones">
+    <div class="pad left">
+      <button>
+        <svg xmlns="http://www.w3.org/2000/svg" height="10vw" viewBox="0 -960 960 960" width="10vw" fill="#e3e3e3">
+          <path transform="translate(960, 0) scale(-1, 1)" d="M200-160v-480h447L503-783l57-57 240 240-241 241-56-57 144-144H280v400h-80Z"/>
+          
+          <text x="180" y="-160" font-family="Arial, sans-serif" font-size="220" fill="#e3e3e3" font-weight="bold">90°</text>
+        </svg>
+      </button>
+      <button type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" height="10vw" viewBox="0 -960 960 960" width="10vw" fill="#e3e3e3">
+          <path d="M200-160v-480h447L503-783l57-57 240 240-241 241-56-57 144-144H280v400h-80Z"/>
+          
+          <text x="450" y="-160" font-family="Arial, sans-serif" font-size="220" fill="#e3e3e3" font-weight="bold">90°</text>
+        </svg>
+      </button>
+    </div>
+    <div class="pad right">
+
+    </div>
+  </div>
+  <div id="status">Conectando...</div>
+
+  <script>
+    const gateway = `ws://${window.location.hostname}/ws`;
+    let websocket;
+    let sliderL, sliderR;
+    let statusDiv;
+
+    window.addEventListener('load', onLoad);
+
+    function onLoad(event) {
+      statusDiv = document.getElementById('status');
+      initWebSocket();
+      initSliders();
+    }
+
+    function initWebSocket() {
+      console.log('Intentando conectar a WebSocket...');
+      websocket = new WebSocket(gateway);
+      websocket.onopen = onOpen;
+      websocket.onclose = onClose;
+      websocket.onerror = onError;
+    }
+
+    function onOpen(event) {
+      console.log('Conexión WebSocket abierta');
+      statusDiv.innerHTML = "Conectado";
+    }
+
+    function onClose(event) {
+      console.log('Conexión WebSocket cerrada');
+      statusDiv.innerHTML = "Desconectado";
+      setTimeout(initWebSocket, 2000); // Reintentar conexión
+    }
+
+    function onError(event) {
+      console.error('Error de WebSocket:', event);
+      statusDiv.innerHTML = "Error de conexión";
+    }
+    
+    function sendSpeed() {
+      if (websocket.readyState === WebSocket.OPEN) {
+        const l = parseInt(sliderL.value);
+        const r = parseInt(sliderR.value);
+        // Enviamos un JSON con los valores
+        const data = { L: l, R: r };
+        websocket.send(JSON.stringify(data));
+      }
+    }
+
+    function initSliders() {
+      sliderL = document.getElementById('sliderL');
+      sliderR = document.getElementById('sliderR');
+
+      // Eventos para cuando el usuario SUELTA el slider
+      const releaseEvents = ['touchend', 'mouseup'];
+      releaseEvents.forEach(evt => {
+        sliderL.addEventListener(evt, () => {
+          sliderL.value = 0; // Vuelve a neutro
+          sendSpeed();
+        });
+        sliderR.addEventListener(evt, () => {
+          sliderR.value = 0; // Vuelve a neutro
+          sendSpeed();
+        });
+      });
+
+      // Eventos para cuando el usuario MUEVE el slider
+      const moveEvents = ['input', 'change'];
+      moveEvents.forEach(evt => {
+        sliderL.addEventListener(evt, sendSpeed);
+        sliderR.addEventListener(evt, sendSpeed);
+      });
+    }
+  </script>
+</body>
+</html>

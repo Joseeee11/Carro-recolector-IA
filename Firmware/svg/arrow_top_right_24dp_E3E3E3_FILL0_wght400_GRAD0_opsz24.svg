@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3">
+  <path transform="translate(960, 0) scale(-1, 1)" d="M200-160v-480h447L503-783l57-57 240 240-241 241-56-57 144-144H280v400h-80Z"/>
+  
+  <text x="180" y="-160" font-family="Arial, sans-serif" font-size="220" fill="#e3e3e3" font-weight="bold">90°</text>
+</svg>

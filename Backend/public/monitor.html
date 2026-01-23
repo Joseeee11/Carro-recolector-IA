@@ -1,43 +1,346 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Monitor de Video IA</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; }
-        img { width: 80%; max-width: 800px; border: 2px solid #0f0; margin-top: 20px; }
+      :root {
+        --bg-color: #1a1a1a;
+        --slider-bg: #333;
+        --thumb-color: #007bff;
+        --thumb-hover: #0056b3;
+        --text-color: #f0f0f0;
+        --button-bg: #1a1a1a2c;
+      }
+      body {
+        background: #000;
+        color: #0f0;
+        font-family: monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        touch-action: none;
+        overflow: hidden;
+      }
+      img {
+        width: 80%;
+        max-width: 800px;
+        border: 2px solid #0f0;
+        margin-top: 20px;
+      }
+      .headers {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      .container_palancas {
+        display: flex;
+        flex: 0.9;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        width: 90%;
+        max-width: 600px;
+      }
+      .slider-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+      h2 {
+        font-weight: 400;
+        margin-bottom: 15px;
+      }
+      .slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 50px;
+        height: 250px;
+        background: var(--slider-bg);
+        outline: none;
+        border-radius: 10px;
+        margin: 0;
+        writing-mode: bt-rl; /* IE */
+        -webkit-appearance: slider-vertical; /* WebKit */
+      }
+      /* Estilos del "pulgar" (thumb) */
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 40px;
+        height: 40px;
+        background: var(--thumb-color);
+        cursor: pointer;
+        border-radius: 50%;
+        transition: background 0.1s ease-in-out;
+      }
+      .slider::-moz-range-thumb {
+        width: 40px;
+        height: 40px;
+        background: var(--thumb-color);
+        cursor: pointer;
+        border-radius: 50%;
+        transition: background 0.1s ease-in-out;
+      }
+      .slider::-webkit-slider-thumb:hover {
+        background: var(--thumb-hover);
+      }
+      .slider::-moz-range-thumb:hover {
+        background: var(--thumb-hover);
+      }
+      #status {
+        margin-top: 20px;
+        font-size: 1.1em;
+        color: #888;
+      }
+      .pad button {
+        background-color: var(--button-bg);
+        border: 2px solid var(--text-color);
+        border-radius: 10px;
+        color: var(--text-color);
+      }
+      .pad button:active {
+        background-color: var(--thumb-color);
+        border-color: var(--thumb-color);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h2>🖥️ MONITOR DE RECEPCIÓN</h2>
     <div id="fps">FPS: 0</div>
-    <img id="pantalla" src="" alt="Esperando video...">
+    <img id="pantalla" src="" alt="Esperando video..." />
+
+    <div class="container_palancas">
+      <div class="slider-wrapper">
+        <h2>Izquierda</h2>
+        <input
+          type="range"
+          min="-255"
+          max="255"
+          value="0"
+          class="slider"
+          id="sliderL"
+          orient="vertical"
+        />
+      </div>
+      <div class="slider-wrapper">
+        <h2>Derecha</h2>
+        <input
+          type="range"
+          min="-255"
+          max="255"
+          value="0"
+          class="slider"
+          id="sliderR"
+          orient="vertical"
+        />
+      </div>
+    </div>
+    <div class="container_botones">
+      <div class="pad left">
+        <button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="10vw"
+            viewBox="0 -960 960 960"
+            width="10vw"
+            fill="#e3e3e3"
+          >
+            <path
+              transform="translate(960, 0) scale(-1, 1)"
+              d="M200-160v-480h447L503-783l57-57 240 240-241 241-56-57 144-144H280v400h-80Z"
+            />
+
+            <text
+              x="180"
+              y="-160"
+              font-family="Arial, sans-serif"
+              font-size="220"
+              fill="#e3e3e3"
+              font-weight="bold"
+            >
+              90°
+            </text>
+          </svg>
+        </button>
+        <button type="button">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="10vw"
+            viewBox="0 -960 960 960"
+            width="10vw"
+            fill="#e3e3e3"
+          >
+            <path
+              d="M200-160v-480h447L503-783l57-57 240 240-241 241-56-57 144-144H280v400h-80Z"
+            />
+
+            <text
+              x="450"
+              y="-160"
+              font-family="Arial, sans-serif"
+              font-size="220"
+              fill="#e3e3e3"
+              font-weight="bold"
+            >
+              90°
+            </text>
+          </svg>
+        </button>
+      </div>
+      <div class="pad right"></div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const pantalla = document.getElementById('pantalla');
-        const fpsDisplay = document.getElementById('fps');
-        
-        let frameCount = 0;
-        setInterval(() => {
-            fpsDisplay.innerText = `FPS: ${frameCount}`;
-            frameCount = 0;
-        }, 1000);
+      let sliderL, sliderR;
+      const socket = io();
+      const pantalla = document.getElementById("pantalla");
+      const fpsDisplay = document.getElementById("fps");
 
-        socket.on('monitor-frame', (wepb) => {
-            // llega webp como dataURL
-            const url = wepb;
-            // 1. Recibir el webp y pasamos a url de objeto
+      let frameCount = 0;
+      setInterval(() => {
+        fpsDisplay.innerText = `FPS: ${frameCount}`;
+        frameCount = 0;
+      }, 1000);
+      
+      socket.emit('register', 'monitor');
 
-            const viejaUrl = pantalla.src;
-            pantalla.src = url;
-            if (viejaUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(viejaUrl);
-            }
+      socket.on("monitor-frame", (wepb) => {
+        // llega webp como dataURL
+        const url = wepb;
+        // 1. Recibir el webp y pasamos a url de objeto
 
-            frameCount++;
+        const viejaUrl = pantalla.src;
+        pantalla.src = url;
+        if (viejaUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(viejaUrl);
+        }
+
+        frameCount++;
+      });
+
+      function sendSpeed() {
+        const l = parseInt(sliderL.value);
+        const r = parseInt(sliderR.value);
+        // Enviamos un JSON con los valores
+        const data = { L: l, R: r };
+        socket.emit("sliderSpeed", data);
+      }
+      function initSliders() {
+        sliderL = document.getElementById("sliderL");
+        sliderR = document.getElementById("sliderR");
+
+        // Agregamos 'change' y 'touchend' para asegurar redundancia
+        const releaseEvents = [
+          "pointerup",
+          "pointercancel",
+          "touchend",
+          "mouseup",
+        ];
+
+        releaseEvents.forEach((evt) => {
+          sliderL.addEventListener(evt, () => {
+            setTimeout(() => {
+              sliderL.value = 0;
+              sendSpeed();
+            }, 0);
+          });
+
+          sliderR.addEventListener(evt, () => {
+            setTimeout(() => {
+              sliderR.value = 0;
+              sendSpeed();
+            }, 0);
+          });
         });
+
+        // Mantiene la actualización mientras se mueve
+        sliderL.addEventListener("input", sendSpeed);
+        sliderR.addEventListener("input", sendSpeed);
+      }
+      window.addEventListener("load", initSliders);
+
+      /* =========================================
+   CONTROL DE TECLADO (WASD) - LÓGICA DE MEZCLA
+   ========================================= */
+      const keys = {
+        w: false,
+        a: false,
+        s: false,
+        d: false,
+      };
+
+      // Configuración de velocidad máxima
+      const MAX_SPEED = 255;
+      const TURN_SPEED = 200; // Un poco menos para tener control al girar
+
+      function updateMovement() {
+        let speed = 0;
+        let turn = 0;
+
+        // 1. Calcular velocidad lineal (Adelante/Atrás)
+        if (keys.w) speed += MAX_SPEED;
+        if (keys.s) speed -= MAX_SPEED;
+
+        // 2. Calcular rotación (Izquierda/Derecha)
+        if (keys.d) turn += TURN_SPEED; // Derecha aumenta diferencia
+        if (keys.a) turn -= TURN_SPEED; // Izquierda disminuye diferencia
+
+        // 3. Algoritmo de "Arcade Drive" (Mezcla simple)
+        // Izquierda = Velocidad + Giro
+        // Derecha   = Velocidad - Giro
+        let left = speed + turn;
+        let right = speed - turn;
+
+        // 4. Limitar los valores a +/- 255 (Clamping)
+        // Esto es vital si presionas W + D (255 + 200 = 455) para que no se pase
+        const clamp = (val) => Math.min(Math.max(val, -255), 255);
+
+        left = clamp(left);
+        right = clamp(right);
+
+        // 5. Enviar solo si hubo cambios (opcional) o enviar siempre
+        // Enviamos al evento 'sliderSpeed' que ya configuramos en el ESP32
+        socket.emit("sliderSpeed", { L: left, R: right });
+
+        // (Opcional) Visualizar en los sliders de la pantalla para feedback
+        if (sliderL && sliderR) {
+          sliderL.value = left;
+          sliderR.value = right;
+        }
+      }
+
+      // Escuchamos cuando se PRESIONA una tecla
+      document.addEventListener("keydown", (event) => {
+        if (event.repeat) return; // Evitar el "auto-repeat" del sistema operativo
+
+        const key = event.key.toLowerCase();
+
+        // Actualizamos el estado de la tecla
+        if (key === "w") keys.w = true;
+        if (key === "a") keys.a = true;
+        if (key === "s") keys.s = true;
+        if (key === "d") keys.d = true;
+
+        updateMovement();
+      });
+
+      // Escuchamos cuando se SUELTA una tecla
+      document.addEventListener("keyup", (event) => {
+        const key = event.key.toLowerCase();
+
+        // Apagamos el estado de la tecla
+        if (key === "w") keys.w = false;
+        if (key === "a") keys.a = false;
+        if (key === "s") keys.s = false;
+        if (key === "d") keys.d = false;
+
+        updateMovement();
+      });
     </script>
-</body>
+  </body>
 </html>
